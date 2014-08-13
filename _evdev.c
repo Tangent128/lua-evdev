@@ -1,10 +1,14 @@
 
 #include <unistd.h>
+#include <string.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <linux/uinput.h>
 
 #include <lua.h>
 #include <lauxlib.h>
+
+/* Evdev open/read/close wrappers */
 
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
@@ -50,10 +54,58 @@ static int evdev_close(lua_State *L) {
 	return 0;
 }
 
+/* Uinput open/write/close wrappers */
+
+struct devWrapper {
+	int fd;
+	struct uinput_user_dev dev;
+};
+
+static int uinput_open(lua_State *L) {
+	const char *path = luaL_checkstring(L, 1);
+	
+	int fd = open(path, O_WRONLY | O_NONBLOCK);
+	if(fd < 0) {
+		return luaL_error(L, "Couldn't open uinput device node.");
+	}
+
+	/* Don't leave device open for children should process fork */
+	fcntl(fd, F_SETFD, FD_CLOEXEC);
+	
+	/* push results */
+	lua_pushinteger(L, fd);
+	
+	struct devWrapper *dev = lua_newuserdata(L, sizeof(struct devWrapper));
+	memset(dev, 0, sizeof(struct devWrapper));
+	dev->fd = fd;
+	
+	return 2;
+}
+
+//static int uinput_setBit(lua_State *L) {
+
+//static int uinput_setAxis(lua_State *L) {
+
+//static int uinput_init(lua_State *L) {
+
+static int uinput_close(lua_State *L) {
+	int fd = luaL_checkinteger(L, 1);
+	
+	/* should destroy on close anyways, but being explicit: */
+	ioctl(fd, UI_DEV_DESTROY);
+	close(fd);
+	
+	return 0;
+}
+
+/* Expose to Lua */
+
 static const luaL_Reg evdevFuncs[] = {
 	{ "open", &evdev_open },
 	{ "read", &evdev_read },
 	{ "close", &evdev_close },
+	{ "uinput_open", &uinput_open },
+	{ "uinput_close", &uinput_close },
 	{ NULL, NULL }
 };
 
