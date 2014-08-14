@@ -56,10 +56,7 @@ static int evdev_close(lua_State *L) {
 
 /* Uinput open/write/close wrappers */
 
-struct devWrapper {
-	int fd;
-	struct uinput_user_dev dev;
-};
+#define USERDATA_NAME "lua.evdev.uinput.struct.uinput_user_dev"
 
 static int uinput_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
@@ -74,10 +71,14 @@ static int uinput_open(lua_State *L) {
 	
 	/* push results */
 	lua_pushinteger(L, fd);
+
+	struct uinput_user_dev *dev = lua_newuserdata(L, sizeof(struct uinput_user_dev));
+	luaL_setmetatable(L, USERDATA_NAME);
 	
-	struct devWrapper *dev = lua_newuserdata(L, sizeof(struct devWrapper));
-	memset(dev, 0, sizeof(struct devWrapper));
-	dev->fd = fd;
+	/* init dummy device description */
+	memset(dev, 0, sizeof(struct uinput_user_dev));
+	strncpy(dev->name, "Lua-Powered Virtual Input Device", UINPUT_MAX_NAME_SIZE);
+	
 	
 	return 2;
 }
@@ -86,7 +87,21 @@ static int uinput_open(lua_State *L) {
 
 //static int uinput_setAxis(lua_State *L) {
 
-//static int uinput_init(lua_State *L) {
+static int uinput_init(lua_State *L) {
+	
+	int fd = luaL_checkinteger(L, 1);
+	
+	struct uinput_user_dev *dev = luaL_checkudata(L, 2, USERDATA_NAME);
+	
+	// register device
+	write(fd, dev, sizeof(struct uinput_user_dev));
+	
+	if(ioctl(fd, UI_DEV_CREATE)) {
+		return luaL_error(L, "Couldn't create uinput device node.");
+	}
+	
+	return 0;
+}
 
 static int uinput_close(lua_State *L) {
 	int fd = luaL_checkinteger(L, 1);
@@ -105,11 +120,13 @@ static const luaL_Reg evdevFuncs[] = {
 	{ "read", &evdev_read },
 	{ "close", &evdev_close },
 	{ "uinput_open", &uinput_open },
+	{ "uinput_init", &uinput_init },
 	{ "uinput_close", &uinput_close },
 	{ NULL, NULL }
 };
 
 int luaopen__evdev(lua_State *L) {
+	luaL_newmetatable(L, USERDATA_NAME);
 	luaL_newlib(L, evdevFuncs);
 	return 1;
 }
