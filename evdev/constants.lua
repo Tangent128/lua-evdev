@@ -21,6 +21,14 @@ EV_FF_STATUS = 0x17
 EV_MAX = 0x1f
 EV_CNT = (EV_MAX+1)
 
+-- Synchronization
+SYN_REPORT = 0
+SYN_CONFIG = 1
+SYN_MT_REPORT = 2
+SYN_DROPPED = 3
+SYN_MAX = 0xf
+SYN_CNT = (SYN_MAX+1)
+
 -- Keys
 KEY_RESERVED = 0
 KEY_ESC = 1

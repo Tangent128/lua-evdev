@@ -2,6 +2,7 @@
 
 local capture = {
 	{"Event Types", "^EV_"},
+	{"Synchronization", "^SYN_"},
 	{"Keys", "^KEY_"},
 	{"Buttons", "^BTN_"},
 	{"Relative Axes", "^REL_"},
