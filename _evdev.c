@@ -24,14 +24,11 @@ if(dev->fd == -1) { \
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 	
-	int fd = open(path, O_RDONLY);
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
 	if(fd < 0) {
 		return luaL_error(L, "Couldn't open device node.");
 	}
 
-	/* Don't leave device open for children should process fork */
-	fcntl(fd, F_SETFD, FD_CLOEXEC);
-	
 	/* create userdata */
 	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
 	dev->fd = fd;
@@ -99,17 +96,15 @@ if(isInit == 1) { \
 	return luaL_error(L, "Logic error in CHECK_UINPUT"); \
 }
 
+
 static int uinput_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 	
-	int fd = open(path, O_WRONLY | O_NONBLOCK);
+	int fd = open(path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
 	if(fd < 0) {
 		return luaL_error(L, "Couldn't open uinput device node.");
 	}
 
-	/* Don't leave device open for children should process fork */
-	fcntl(fd, F_SETFD, FD_CLOEXEC);
-	
 	/* create userdata */
 	struct userdev *dev = lua_newuserdata(L, sizeof(struct userdev));
 	memset(dev, 0, sizeof(struct userdev));
@@ -119,7 +114,7 @@ static int uinput_open(lua_State *L) {
 	
 	/* init dummy device description */
 	strncpy(dev->dev.name, "Lua-Powered Virtual Input Device", UINPUT_MAX_NAME_SIZE);
-	
+	dev->dev.id.bustype = BUS_VIRTUAL;
 	
 	return 1;
 }
@@ -133,7 +128,7 @@ static int uinput_init(lua_State *L) {
 	CHECK_UINPUT(dev, 1, 0)
 	
 	// register device
-	write(dev->fd, dev, sizeof(struct uinput_user_dev));
+	write(dev->fd, &dev->dev, sizeof(struct uinput_user_dev));
 	
 	if(ioctl(dev->fd, UI_DEV_CREATE)) {
 		return luaL_error(L, "Couldn't create uinput device node.");
