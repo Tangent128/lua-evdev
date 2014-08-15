@@ -3,7 +3,7 @@ local evdev = require "evdev"
 
 local path = ...
 
-local dev = evdev.open(path)
+local dev = evdev.Device(path)
 
 local x,y = 0,0
 local btn0,btn1,btn2 = 0,0,0

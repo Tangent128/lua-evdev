@@ -8,7 +8,18 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-/* Evdev open/read/close wrappers */
+/* Evdev wrappers */
+
+#define EVDEV_USERDATA "us.tropi.evdev.struct.inputDevice"
+struct inputDevice {
+	int fd; // file descriptor
+};
+
+#define CHECK_EVDEV(dev, index) \
+struct inputDevice *dev = luaL_checkudata(L, 1, EVDEV_USERDATA); \
+if(dev->fd == -1) { \
+	return luaL_error(L, "Trying to use closed device event node."); \
+}
 
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
@@ -21,18 +32,22 @@ static int evdev_open(lua_State *L) {
 	/* Don't leave device open for children should process fork */
 	fcntl(fd, F_SETFD, FD_CLOEXEC);
 	
-	lua_pushinteger(L, fd);
+	/* create userdata */
+	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
+	dev->fd = fd;
+	
+	luaL_setmetatable(L, EVDEV_USERDATA);
 	
 	return 1;
 }
 
 static int evdev_read(lua_State *L) {
-	int fd = luaL_checkinteger(L, 1);
+	CHECK_EVDEV(dev, 1);
 
 	struct input_event evt;
 	const size_t evt_size = sizeof(struct input_event);
 
-	int count = read(fd, &evt, evt_size);
+	int count = read(dev->fd, &evt, evt_size);
 	if(count < evt_size) {
 		return luaL_error(L, "Failure reading input event.");
 	}
@@ -47,24 +62,27 @@ static int evdev_read(lua_State *L) {
 }
 
 static int evdev_close(lua_State *L) {
-	int fd = luaL_checkinteger(L, 1);
+	struct inputDevice *dev = luaL_checkudata(L, 1, EVDEV_USERDATA);
 	
-	close(fd);
-	
+	if(dev->fd != -1) {
+		close(dev->fd);
+		dev->fd = -1;
+	}
+
 	return 0;
 }
 
-/* Uinput open/write/close wrappers */
+/* Uinput wrappers */
 
-#define USERDATA_NAME "us.tropi.evdev.struct.userdev"
+#define UINPUT_USERDATA "us.tropi.evdev.struct.userdev"
 struct userdev {
-	int fd; // file descriptor
-	int init; // 0 if not initialized, 1 if initialized
-	struct uinput_user_dev dev;
+       int fd; // file descriptor
+       int init; // 0 if not initialized, 1 if initialized
+       struct uinput_user_dev dev;
 };
 
 #define CHECK_UINPUT(dev, index, isInit) \
-struct userdev *dev = luaL_checkudata(L, 1, USERDATA_NAME); \
+struct userdev *dev = luaL_checkudata(L, 1, UINPUT_USERDATA); \
 if(dev->fd == -1) { \
 	return luaL_error(L, "Trying to use closed uinput device node."); \
 } \
@@ -97,7 +115,7 @@ static int uinput_open(lua_State *L) {
 	memset(dev, 0, sizeof(struct userdev));
 	dev->fd = fd;
 	
-	luaL_setmetatable(L, USERDATA_NAME);
+	luaL_setmetatable(L, UINPUT_USERDATA);
 	
 	/* init dummy device description */
 	strncpy(dev->dev.name, "Lua-Powered Virtual Input Device", UINPUT_MAX_NAME_SIZE);
@@ -128,7 +146,7 @@ static int uinput_init(lua_State *L) {
 
 static int uinput_close(lua_State *L) {
 
-	struct userdev *dev = luaL_checkudata(L, 1, USERDATA_NAME);
+	struct userdev *dev = luaL_checkudata(L, 1, UINPUT_USERDATA);
 	
 	/* explicit double-closes are poor practice,
 	 * but don't make them errors because we always close on __gc  */
@@ -149,10 +167,14 @@ static int uinput_close(lua_State *L) {
 /* Expose to Lua */
 
 static const luaL_Reg evdevFuncs[] = {
-	{ "open", &evdev_open },
+	{ "Device", &evdev_open },
+	{ "Uinput", &uinput_open },
+	{ NULL, NULL }
+};
+
+static const luaL_Reg evdev_mtFuncs[] = {
 	{ "read", &evdev_read },
 	{ "close", &evdev_close },
-	{ "uinput_open", &uinput_open },
 	{ NULL, NULL }
 };
 
@@ -164,8 +186,19 @@ static const luaL_Reg uinput_mtFuncs[] = {
 
 int luaopen__evdev(lua_State *L) {
 	
+	/* Evdev metatable */
+	luaL_newmetatable(L, EVDEV_USERDATA);
+	
+	lua_pushstring(L, "__index");
+	luaL_newlib(L, evdev_mtFuncs);
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "__gc");
+	lua_pushcfunction(L, &evdev_close);
+	lua_settable(L, -3);
+	
 	/* Uinput metatable */
-	luaL_newmetatable(L, USERDATA_NAME);
+	luaL_newmetatable(L, UINPUT_USERDATA);
 	
 	lua_pushstring(L, "__index");
 	luaL_newlib(L, uinput_mtFuncs);
