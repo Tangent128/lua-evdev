@@ -98,7 +98,7 @@ if(isInit == 1) { \
 
 
 static int uinput_open(lua_State *L) {
-	const char *path = luaL_checkstring(L, 1);
+	const char *path = luaL_optstring(L, 1, "/dev/uinput");
 	
 	int fd = open(path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
 	if(fd < 0) {
@@ -113,19 +113,47 @@ static int uinput_open(lua_State *L) {
 	luaL_setmetatable(L, UINPUT_USERDATA);
 	
 	/* init dummy device description */
-	strncpy(dev->dev.name, "Lua-Powered Virtual Input Device", UINPUT_MAX_NAME_SIZE);
 	dev->dev.id.bustype = BUS_VIRTUAL;
 	
 	return 1;
 }
 
-//static int uinput_setBit(lua_State *L) {
+#define BIT_TYPES(action, axisAction) \
+action(useEvent, UI_SET_EVBIT) \
+action(useKey, UI_SET_KEYBIT) \
+axisAction(useRelAxis, UI_SET_RELBIT) \
+axisAction(useAbsAxis, UI_SET_ABSBIT)
 
-//static int uinput_setAxis(lua_State *L) {
+
+#define DECLARE_BIT_SETTER(name, type) \
+static int uinput_ ## name (lua_State *L) { \
+	CHECK_UINPUT(dev, 1, 0) \
+	int bit = luaL_checkint(L, 2); \
+	ioctl(dev->fd, type, bit); \
+	return 0; \
+}
+
+#define DECLARE_AXIS_BIT_SETTER(name, type) \
+static int uinput_ ## name (lua_State *L) { \
+	CHECK_UINPUT(dev, 1, 0) \
+	int bit = luaL_checkint(L, 2); \
+	int minVal = luaL_checkint(L, 3); \
+	int maxVal = luaL_checkint(L, 4); \
+	ioctl(dev->fd, type, bit); \
+	dev->dev.absmin[bit] = minVal; \
+	dev->dev.absmax[bit] = maxVal; \
+	return 0; \
+}
+
+BIT_TYPES(DECLARE_BIT_SETTER, DECLARE_AXIS_BIT_SETTER)
 
 static int uinput_init(lua_State *L) {
 	
 	CHECK_UINPUT(dev, 1, 0)
+	
+	/* Give device human-friendly description */
+	char *name = luaL_optstring(L, 2, "Lua-Powered Virtual Input Device");
+	strncpy(dev->dev.name, name, UINPUT_MAX_NAME_SIZE);
 	
 	// register device
 	write(dev->fd, &dev->dev, sizeof(struct uinput_user_dev));
@@ -135,6 +163,21 @@ static int uinput_init(lua_State *L) {
 	}
 	
 	dev->init = 1;
+	
+	return 0;
+}
+
+static int uinput_write(lua_State *L) {
+	CHECK_UINPUT(dev, 1, 1)
+	
+	struct input_event evt;
+	memset(&evt, 0, sizeof(struct input_event));
+	
+	evt.type = luaL_checkint(L, 2);
+	evt.code = luaL_checkint(L, 3);
+	evt.value = luaL_checkint(L, 4);
+	
+	write(dev->fd, &evt, sizeof(struct input_event));
 	
 	return 0;
 }
@@ -173,9 +216,14 @@ static const luaL_Reg evdev_mtFuncs[] = {
 	{ NULL, NULL }
 };
 
+#define REGISTER_BIT_SETTER(name, type) \
+{ #name, &uinput_ ## name },
+
 static const luaL_Reg uinput_mtFuncs[] = {
 	{ "init", &uinput_init },
 	{ "close", &uinput_close },
+	{ "write", &uinput_write},
+	BIT_TYPES(REGISTER_BIT_SETTER, REGISTER_BIT_SETTER)
 	{ NULL, NULL }
 };
 
