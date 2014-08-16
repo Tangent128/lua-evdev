@@ -69,6 +69,14 @@ static int evdev_close(lua_State *L) {
 	return 0;
 }
 
+static int evdev_pollfd(lua_State *L) {
+	CHECK_EVDEV(dev, 1);
+
+	lua_pushinteger(L, dev->fd);
+
+	return 1;
+}
+
 /* Uinput wrappers */
 
 #define UINPUT_USERDATA "us.tropi.evdev.struct.userdev"
@@ -213,6 +221,7 @@ static const luaL_Reg evdevFuncs[] = {
 static const luaL_Reg evdev_mtFuncs[] = {
 	{ "read", &evdev_read },
 	{ "close", &evdev_close },
+	{ "pollfd", &evdev_pollfd },
 	{ NULL, NULL }
 };
 
@@ -234,11 +243,17 @@ int luaopen__evdev(lua_State *L) {
 	
 	lua_pushstring(L, "__index");
 	luaL_newlib(L, evdev_mtFuncs);
+	
+		lua_pushstring(L, "events");
+		lua_pushstring(L, "r");
+		lua_settable(L, -3);
+	
 	lua_settable(L, -3);
 
 	lua_pushstring(L, "__gc");
 	lua_pushcfunction(L, &evdev_close);
 	lua_settable(L, -3);
+	
 	
 	/* Uinput metatable */
 	luaL_newmetatable(L, UINPUT_USERDATA);
