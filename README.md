@@ -35,8 +35,8 @@ Example: Creating a fake mouse:
 ---
 
 ```lua
-local evdev = require "evdev"
-local fakeMouse = evdev.Uinput "/dev/uinput"
+local e = require "evdev"
+local fakeMouse = e.Uinput "/dev/uinput"
 -- register supported events
 fakeMouse:useEvent(e.EV_KEY)
 fakeMouse:useEvent(e.EV_REL)
