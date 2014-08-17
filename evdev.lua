@@ -26,7 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 --]]
 
-local c = require "_evdev"
+local c = require "evdev.core"
 local constants = require "evdev.constants"
 local setmetatable = setmetatable
 

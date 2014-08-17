@@ -261,7 +261,7 @@ static const luaL_Reg uinput_mtFuncs[] = {
 	{ NULL, NULL }
 };
 
-int luaopen__evdev(lua_State *L) {
+int luaopen_evdev_core(lua_State *L) {
 	
 	/* Evdev metatable */
 	luaL_newmetatable(L, EVDEV_USERDATA);

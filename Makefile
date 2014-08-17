@@ -1,4 +1,4 @@
 
-_evdev.so: _evdev.c
-	gcc -shared -o _evdev.so -fPIC -Wall _evdev.c
+evdev/core.so: evdev/core.c
+	gcc -shared -o evdev/core.so -fPIC -Wall evdev/core.c
 	
