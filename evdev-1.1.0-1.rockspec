@@ -1,8 +1,8 @@
-package = "lua-evdev"
-version = "1.0.0-1"
+package = "evdev"
+version = "1.1.0-1"
 source = {
    url = "git://github.com/Tangent128/lua-evdev",
-   tag = "evdev-1.0"
+   tag = "evdev-1.1"
 }
 description = {
    summary = "Lua library for using Linux evdev & uinput interfaces",

@@ -24,6 +24,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
  */
+
+/* Needed for O_CLOEXEC */
+#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -37,7 +41,7 @@ THE SOFTWARE.
 
 #define EVDEV_USERDATA "us.tropi.evdev.struct.inputDevice"
 struct inputDevice {
-	int fd; // file descriptor
+	int fd; /* file descriptor */
 };
 
 #define CHECK_EVDEV(dev, index) \
@@ -48,7 +52,7 @@ if(dev->fd == -1) { \
 
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
-	
+
 	int fd = open(path, O_RDONLY | O_CLOEXEC);
 	if(fd < 0) {
 		return luaL_error(L, "Couldn't open device node.");
@@ -57,20 +61,24 @@ static int evdev_open(lua_State *L) {
 	/* create userdata */
 	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
 	dev->fd = fd;
-	
+
 	luaL_setmetatable(L, EVDEV_USERDATA);
-	
+
 	return 1;
 }
 
-static int evdev_read(lua_State *L) {
+static int evdev_tryRead(lua_State *L) {
 	CHECK_EVDEV(dev, 1);
 
 	struct input_event evt;
 	const size_t evt_size = sizeof(struct input_event);
 
 	int count = read(dev->fd, &evt, evt_size);
-	if(count < evt_size) {
+
+	if(count < 0) {
+		/* device was presumably unplugged */
+		return 0;
+	} else if((unsigned int) count < evt_size) {
 		return luaL_error(L, "Failure reading input event.");
 	}
 
@@ -81,6 +89,16 @@ static int evdev_read(lua_State *L) {
 	lua_pushinteger(L, evt.value);
 	
 	return 4;
+}
+
+static int evdev_read(lua_State *L) {
+	int count = evdev_tryRead(L);
+
+	if(count == 0) {
+		return luaL_error(L, "End of input event stream.");
+	}
+
+	return count;
 }
 
 static int evdev_close(lua_State *L) {
@@ -245,6 +263,7 @@ static const luaL_Reg evdevFuncs[] = {
 
 static const luaL_Reg evdev_mtFuncs[] = {
 	{ "read", &evdev_read },
+	{ "tryRead", &evdev_tryRead },
 	{ "close", &evdev_close },
 	{ "pollfd", &evdev_pollfd },
 	{ NULL, NULL }

@@ -73,7 +73,10 @@ a `Device` object. File permissions to read `path` are necessary.
 3. the event code (KEY_A, REL_X, ABS_Y, etc.)
 4. the event value (axis value, or 0/1 for button state)
 
-The read will block if no events are available.
+The read will block if no events are available, and throw an error if
+the device reaches EOF (such as if unplugged).
+
+`Device:tryRead()` - like `Device:read()`, but returns nil on EOF.
 
 `Device:close()` - close the file descriptor; further reads will be
 errors. `Device` objects are automatically closed on garbage-collection.
