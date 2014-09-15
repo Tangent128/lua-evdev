@@ -122,8 +122,8 @@ static int evdev_close(lua_State *L) {
 	struct inputDevice *dev = luaL_checkudata(L, 1, EVDEV_USERDATA);
 	
 	if(dev->fd != -1) {
-		dev->fd = -1;
 		close(dev->fd);
+		dev->fd = -1;
 	}
 
 	return 0;
@@ -260,12 +260,12 @@ static int uinput_close(lua_State *L) {
 		return 0;
 	}
 	
-	/* mark resource released */
-	dev->fd = -1;
-
 	/* uinput device destroys on close anyways, but being explicit: */
 	ioctl(dev->fd, UI_DEV_DESTROY);
 	close(dev->fd);
+	
+	/* mark resource released */
+	dev->fd = -1;
 	
 	return 0;
 }
