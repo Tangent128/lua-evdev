@@ -78,6 +78,12 @@ the device reaches EOF (such as if unplugged).
 
 `Device:tryRead()` - like `Device:read()`, but returns nil on EOF.
 
+`Device:grab(enable)` - if the argument is true or not given, grab the
+device, ensuring all input events for it are exclusively delivered to
+this handle. Returns true if the grab suceeded.
+
+If the argument is false, release any existing grab.
+
 `Device:close()` - close the file descriptor; further reads will be
 errors. `Device` objects are automatically closed on garbage-collection.
 

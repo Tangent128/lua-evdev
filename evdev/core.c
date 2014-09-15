@@ -28,6 +28,7 @@ THE SOFTWARE.
 /* Needed for O_CLOEXEC */
 #define _GNU_SOURCE
 
+#include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -45,7 +46,7 @@ struct inputDevice {
 };
 
 #define CHECK_EVDEV(dev, index) \
-struct inputDevice *dev = luaL_checkudata(L, 1, EVDEV_USERDATA); \
+struct inputDevice *dev = luaL_checkudata(L, index, EVDEV_USERDATA); \
 if(dev->fd == -1) { \
 	return luaL_error(L, "Trying to use closed device event node."); \
 }
@@ -101,12 +102,28 @@ static int evdev_read(lua_State *L) {
 	return count;
 }
 
+static int evdev_grab(lua_State *L) {
+	CHECK_EVDEV(dev, 1);
+
+	int wantGrab = lua_isnone(L, 2) || lua_toboolean(L, 2);
+
+	if(ioctl(dev->fd, EVIOCGRAB, wantGrab) < 0) {
+		/* Presuming any error here means a failed grab;
+		 * not sure if any error besides EBUSY is possible. */
+		lua_pushboolean(L, 0);
+		return 1;
+	}
+	
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
 static int evdev_close(lua_State *L) {
 	struct inputDevice *dev = luaL_checkudata(L, 1, EVDEV_USERDATA);
 	
 	if(dev->fd != -1) {
-		close(dev->fd);
 		dev->fd = -1;
+		close(dev->fd);
 	}
 
 	return 0;
@@ -130,7 +147,7 @@ struct userdev {
 };
 
 #define CHECK_UINPUT(dev, index, isInit) \
-struct userdev *dev = luaL_checkudata(L, 1, UINPUT_USERDATA); \
+struct userdev *dev = luaL_checkudata(L, index, UINPUT_USERDATA); \
 if(dev->fd == -1) { \
 	return luaL_error(L, "Trying to use closed uinput device node."); \
 } \
@@ -243,12 +260,12 @@ static int uinput_close(lua_State *L) {
 		return 0;
 	}
 	
+	/* mark resource released */
+	dev->fd = -1;
+
 	/* uinput device destroys on close anyways, but being explicit: */
 	ioctl(dev->fd, UI_DEV_DESTROY);
 	close(dev->fd);
-	
-	/* mark resource released */
-	dev->fd = -1;
 	
 	return 0;
 }
@@ -265,6 +282,7 @@ static const luaL_Reg evdev_mtFuncs[] = {
 	{ "read", &evdev_read },
 	{ "tryRead", &evdev_tryRead },
 	{ "close", &evdev_close },
+	{ "grab", &evdev_grab },
 	{ "pollfd", &evdev_pollfd },
 	{ NULL, NULL }
 };
