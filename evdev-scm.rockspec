@@ -1,8 +1,7 @@
 package = "evdev"
-version = "1.1.0-1"
+version = "scm-1"
 source = {
-   url = "git://github.com/Tangent128/lua-evdev",
-   tag = "evdev-1.1"
+   url = "git://github.com/Tangent128/lua-evdev"
 }
 description = {
    summary = "Lua library for using Linux evdev & uinput interfaces",
