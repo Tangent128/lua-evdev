@@ -54,9 +54,14 @@ if(dev->fd == -1) { \
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 
-	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	// Attempt opening for writing first, so we can send LED events and such
+	int fd = open(path, O_RDWR | O_CLOEXEC);
 	if(fd < 0) {
-		return luaL_error(L, "Couldn't open device node.");
+		// else try falling back to reading events only
+		fd = open(path, O_RDONLY | O_CLOEXEC);
+		if(fd < 0) {
+			return luaL_error(L, "Couldn't open device node.");
+		}
 	}
 
 	/* create userdata */
@@ -73,6 +78,7 @@ static int evdev_tryRead(lua_State *L) {
 
 	struct input_event evt;
 	const size_t evt_size = sizeof(struct input_event);
+	memset(&evt, 0, evt_size);
 
 	int count = read(dev->fd, &evt, evt_size);
 
@@ -116,6 +122,21 @@ static int evdev_grab(lua_State *L) {
 	
 	lua_pushboolean(L, 1);
 	return 1;
+}
+
+static int evdev_write(lua_State *L) {
+	CHECK_EVDEV(dev, 1);
+	
+	struct input_event evt;
+	memset(&evt, 0, sizeof(struct input_event));
+	
+	evt.type = luaL_checkint(L, 2);
+	evt.code = luaL_checkint(L, 3);
+	evt.value = luaL_checkint(L, 4);
+	
+	write(dev->fd, &evt, sizeof(struct input_event));
+	
+	return 0;
 }
 
 static int evdev_close(lua_State *L) {
@@ -281,6 +302,7 @@ static const luaL_Reg evdevFuncs[] = {
 static const luaL_Reg evdev_mtFuncs[] = {
 	{ "read", &evdev_read },
 	{ "tryRead", &evdev_tryRead },
+	{ "write", &evdev_write},
 	{ "close", &evdev_close },
 	{ "grab", &evdev_grab },
 	{ "pollfd", &evdev_pollfd },

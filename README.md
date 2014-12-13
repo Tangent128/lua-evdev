@@ -64,7 +64,8 @@ Device - read input events
 ---
 
 `evdev.Device(path)` - open the device event node at `path`, returning
-a `Device` object. File permissions to read `path` are necessary.
+a `Device` object. File permissions to read `path` are necessary, and
+an attempt to open for writing will be made to support `Device:write()`.
 
 `Device:read()` - read a single event, returning 4 values:
 
@@ -83,6 +84,10 @@ device, ensuring all input events for it are exclusively delivered to
 this handle. Returns true if the grab suceeded.
 
 If the argument is false, release any existing grab.
+
+`Device:write(type, code, value)` - send an event back to the input
+device. For example, an EV_LED event to control keyboard lights. Only
+works if the device was successfully opened for writing.
 
 `Device:close()` - close the file descriptor; further reads will be
 errors. `Device` objects are automatically closed on garbage-collection.
