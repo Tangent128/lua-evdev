@@ -7,6 +7,7 @@ local capture = {
 	{"Buttons", "^BTN_"},
 	{"Relative Axes", "^REL_"},
 	{"Absolute Axes", "^ABS_"},
+	{"LEDs", "^LED_"},
 }
 
 local header = [[
