@@ -130,9 +130,9 @@ static int evdev_write(lua_State *L) {
 	struct input_event evt;
 	memset(&evt, 0, sizeof(struct input_event));
 	
-	evt.type = luaL_checkint(L, 2);
-	evt.code = luaL_checkint(L, 3);
-	evt.value = luaL_checkint(L, 4);
+	evt.type = luaL_checkinteger(L, 2);
+	evt.code = luaL_checkinteger(L, 3);
+	evt.value = luaL_checkinteger(L, 4);
 	
 	write(dev->fd, &evt, sizeof(struct input_event));
 	
@@ -217,7 +217,7 @@ axisAction(useAbsAxis, UI_SET_ABSBIT)
 #define DECLARE_BIT_SETTER(name, type) \
 static int uinput_ ## name (lua_State *L) { \
 	CHECK_UINPUT(dev, 1, 0) \
-	int bit = luaL_checkint(L, 2); \
+	int bit = luaL_checkinteger(L, 2); \
 	ioctl(dev->fd, type, bit); \
 	return 0; \
 }
@@ -225,9 +225,9 @@ static int uinput_ ## name (lua_State *L) { \
 #define DECLARE_AXIS_BIT_SETTER(name, type) \
 static int uinput_ ## name (lua_State *L) { \
 	CHECK_UINPUT(dev, 1, 0) \
-	int bit = luaL_checkint(L, 2); \
-	int minVal = luaL_checkint(L, 3); \
-	int maxVal = luaL_checkint(L, 4); \
+	int bit = luaL_checkinteger(L, 2); \
+	int minVal = luaL_checkinteger(L, 3); \
+	int maxVal = luaL_checkinteger(L, 4); \
 	ioctl(dev->fd, type, bit); \
 	dev->dev.absmin[bit] = minVal; \
 	dev->dev.absmax[bit] = maxVal; \
@@ -241,7 +241,7 @@ static int uinput_init(lua_State *L) {
 	CHECK_UINPUT(dev, 1, 0)
 	
 	/* Give device human-friendly description */
-	char *name = luaL_optstring(L, 2, "Lua-Powered Virtual Input Device");
+	const char *name = luaL_optstring(L, 2, "Lua-Powered Virtual Input Device");
 	strncpy(dev->dev.name, name, UINPUT_MAX_NAME_SIZE);
 	
 	// register device
@@ -262,9 +262,9 @@ static int uinput_write(lua_State *L) {
 	struct input_event evt;
 	memset(&evt, 0, sizeof(struct input_event));
 	
-	evt.type = luaL_checkint(L, 2);
-	evt.code = luaL_checkint(L, 3);
-	evt.value = luaL_checkint(L, 4);
+	evt.type = luaL_checkinteger(L, 2);
+	evt.code = luaL_checkinteger(L, 3);
+	evt.value = luaL_checkinteger(L, 4);
 	
 	write(dev->fd, &evt, sizeof(struct input_event));
 	
