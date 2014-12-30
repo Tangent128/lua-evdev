@@ -53,17 +53,26 @@ if(dev->fd == -1) { \
 
 static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
+	int writeMode = lua_toboolean(L, 2);
 
-	// Attempt opening for writing first, so we can send LED events and such
-	int fd = open(path, O_RDWR | O_CLOEXEC);
+	int fd = -1;
+	
+	if(writeMode) {
+		// if requested, attempt opening for writing so we can send LED events and such
+		fd = open(path, O_RDWR | O_CLOEXEC);
+	}
+	
 	if(fd < 0) {
-		// else try falling back to reading events only
+		// writing mode not requested or not allowed,
+		// try falling back to reading events only
 		fd = open(path, O_RDONLY | O_CLOEXEC);
-		if(fd < 0) {
-			return luaL_error(L, "Couldn't open device node.");
-		}
 	}
 
+	if(fd < 0) {
+		// still couldn't open, nothing to be done.
+		return luaL_error(L, "Couldn't open device node.");
+	}
+	
 	/* create userdata */
 	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
 	dev->fd = fd;

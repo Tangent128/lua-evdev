@@ -13,7 +13,7 @@ local evdev = require "evdev"
 -- LED_SCROLLL
 local path, led, state = ...
 
-dev = evdev.Device(path)
+dev = evdev.Device(path, true)
 
 ledID = evdev[led]
 
