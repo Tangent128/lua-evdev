@@ -63,8 +63,14 @@ API
 Device - read input events
 ---
 
-`evdev.Device(path)` - open the device event node at `path`, returning
-a `Device` object. File permissions to read `path` are necessary.
+`evdev.Device(path[, writeMode])` - open the device event node at `path`,
+returning a `Device` object. File permissions to read `path` are necessary,
+and if writeMode is true, an attempt to open for writing will be made to
+support `Device:write()`.
+
+(Note! lua-evdev 1.3 would always try to open for writing; in keeping with
+the principle of least priviledge, lua-evdev 2.0 requires explictly specifying
+that you want to open for writing.)
 
 `Device:read()` - read a single event, returning 4 values:
 
@@ -78,11 +84,15 @@ the device reaches EOF (such as if unplugged).
 
 `Device:tryRead()` - like `Device:read()`, but returns nil on EOF.
 
-`Device:grab(enable)` - if the argument is true or not given, grab the
+`Device:grab([enable])` - if the argument is true or not given, grab the
 device, ensuring all input events for it are exclusively delivered to
 this handle. Returns true if the grab suceeded.
 
 If the argument is false, release any existing grab.
+
+`Device:write(type, code, value)` - send an event back to the input
+device. For example, an EV_LED event to control keyboard lights. Only
+works if the device was successfully opened for writing.
 
 `Device:close()` - close the file descriptor; further reads will be
 errors. `Device` objects are automatically closed on garbage-collection.
