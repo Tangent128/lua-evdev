@@ -1,6 +1,10 @@
 
 local _ENV = {}
 
+if setfenv then
+	setfenv(1, _ENV)
+end
+
 -- Constants for the Linux evdev API
 -- created by the gen-constants.lua script from the <linux/input.h> header
 

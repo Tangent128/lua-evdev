@@ -1,9 +1,5 @@
-
---[[
-Lua 5.2 module for interacting with input devices on Linux.
-
-Supports reading events from device nodes and creating virtual
-devices via uinput.
+lua-evdev
+=========
 
 Copyright © 2015 Tangent 128
 
@@ -24,14 +20,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
---]]
 
-local c = require "evdev.core"
-local constants = require "evdev.constants"
 
-return setmetatable({
-	Device = c.Device,
-	Uinput = c.Uinput,
-}, {
-	__index = constants
-})
+lua-compat-5.3
+==============
+
+Copyright (c) 2015 Kepler Project.
+
+MIT-licensed; refer to compat53/LICENSE for full text.

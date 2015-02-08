@@ -4,7 +4,7 @@
  * Supports reading events from device nodes and creating virtual
  * devices via uinput.
  * 
-Copyright © 2014 Tangent 128
+Copyright © 2015 Tangent 128
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,9 @@ THE SOFTWARE.
  */
 
 /* Needed for O_CLOEXEC */
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
 
 #include <errno.h>
 #include <unistd.h>
