@@ -128,6 +128,9 @@ for the human-friendly name visible to the system if given.
 
 `Uinput:write(type, code, value)` - feed the given event to the input
 system via this virtual device; must be called after `:init()`.
+Note that you need to write an (EV_SYN, SYN_REPORT, 0) event immediately
+after each batch of events; listeners to the virtual device won't
+see an event until you send the associated SYN.
 
 `Uinput:close()` - close the file descriptor; further writes will be
 errors. `Uinput` objects are automatically closed on garbage-collection.
