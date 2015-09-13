@@ -1,5 +1,5 @@
 /*
- * Lua 5.2 module for interacting with input devices on Linux.
+ * Lua 5.2/5.3 module for interacting with input devices on Linux.
  * 
  * Supports reading events from device nodes and creating virtual
  * devices via uinput.
@@ -57,29 +57,27 @@ static int evdev_open(lua_State *L) {
 	const char *path = luaL_checkstring(L, 1);
 	int writeMode = lua_toboolean(L, 2);
 
-	int fd = -1;
+	/* create userdata */
+	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
+	dev->fd = -1;
+
+	luaL_setmetatable(L, EVDEV_USERDATA);
 	
 	if(writeMode) {
 		// if requested, attempt opening for writing so we can send LED events and such
-		fd = open(path, O_RDWR | O_CLOEXEC);
+		dev->fd = open(path, O_RDWR | O_CLOEXEC);
 	}
 	
-	if(fd < 0) {
+	if(dev->fd < 0) {
 		// writing mode not requested or not allowed,
 		// try falling back to reading events only
-		fd = open(path, O_RDONLY | O_CLOEXEC);
+		dev->fd = open(path, O_RDONLY | O_CLOEXEC);
 	}
 
-	if(fd < 0) {
+	if(dev->fd < 0) {
 		// still couldn't open, nothing to be done.
 		return luaL_error(L, "Couldn't open device node.");
 	}
-	
-	/* create userdata */
-	struct inputDevice *dev = lua_newuserdata(L, sizeof(struct inputDevice));
-	dev->fd = fd;
-
-	luaL_setmetatable(L, EVDEV_USERDATA);
 
 	return 1;
 }
@@ -200,17 +198,17 @@ if(isInit == 1) { \
 static int uinput_open(lua_State *L) {
 	const char *path = luaL_optstring(L, 1, "/dev/uinput");
 	
-	int fd = open(path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-	if(fd < 0) {
-		return luaL_error(L, "Couldn't open uinput device node.");
-	}
-
 	/* create userdata */
 	struct userdev *dev = lua_newuserdata(L, sizeof(struct userdev));
 	memset(dev, 0, sizeof(struct userdev));
-	dev->fd = fd;
-	
+	dev->fd = -1;
+
 	luaL_setmetatable(L, UINPUT_USERDATA);
+	
+	dev->fd = open(path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+	if(dev->fd < 0) {
+		return luaL_error(L, "Couldn't open uinput device node.");
+	}
 	
 	/* init dummy device description */
 	dev->dev.id.bustype = BUS_VIRTUAL;
