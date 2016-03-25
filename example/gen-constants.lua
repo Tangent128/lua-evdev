@@ -26,10 +26,10 @@ local footer = [[
 return _ENV
 ]]
 
-local headerFile = ...
+local headerFiles = { ... }
 
-if not headerFile then
-	print "Please provide the header file path as an argument"
+if #headerFiles == 0 then
+	print "Please provide header file path(s) as arguments"
 	return 1
 end
 
@@ -38,12 +38,15 @@ for _, record in pairs(capture) do
 	sections[record[1]] = "-- " .. record[1] .. "\n"
 end
 
-for line in io.lines(headerFile) do
-	local name, value = line:match "^#define%s+(%S+)%s+(%S+)"
-	if name then
-		for _, record in pairs(capture) do
-			if name:match(record[2]) then
-				sections[record[1]] = sections[record[1]] .. name .. " = " .. value .. "\n"
+for headerIndex = 1, #headerFiles do
+	for line in io.lines(headerFiles[headerIndex]) do
+		local name, value = line:match "^#define%s+(%S+)%s+(%S+)"
+		if name then
+			for _, record in pairs(capture) do
+				if name:match(record[2]) then
+					local defineLine = name .. " = " .. value .. "\n"
+					sections[record[1]] = sections[record[1]] .. defineLine
+				end
 			end
 		end
 	end
