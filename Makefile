@@ -1,23 +1,45 @@
-
 # Configuration
 
-SRC= .
+BUILD ?= ./build
 
-COMPAT_CFLAGS= -D _GNU_SOURCE -I $(SRC)/compat53 -include compat-5.3.h
-CFLAGS= -shared -fPIC -Wall -Wextra -pedantic -std=c99 $(MYCFLAGS) $(COMPAT_CFLAGS)
+COMPAT_CFLAGS ?= -D _GNU_SOURCE -I ./compat53 -include compat-5.3.h
+O_CFLAGS      ?= -fPIC -Wall -Wextra -pedantic -std=c99 $(COMPAT_CFLAGS)
+SO_LDFLAGS    ?= -shared
+DEPFILES      != [ -d $(BUILD)/deps ] && find $(BUILD)/deps -name *.d
 
-CORE_SO= evdev/core.so
+all: $(BUILD)/evdev/core.so
 
-# Filepaths
+.PHONY: all clean print
 
-CORE_C= $(SRC)/evdev/core.c
+# Build Rules
 
-# Rules
+$(BUILD)/%.o: %.c
+	mkdir -p $(BUILD)/$(*D) $(BUILD)/deps/$(*D)
+	$(CC) $(O_CFLAGS) $(CFLAGS) -c $< -o $@ -MMD -MP -MF $(BUILD)/deps/$*.d
 
-default: $(CORE_SO)
+%.so:
+	mkdir -p $(@D)
+	$(LD) $(SO_LDFLAGS) $(LDFLAGS) $^ -o $@
 
-$(CORE_SO): $(CORE_C)
-	gcc $(CFLAGS) -o $(CORE_SO) $(CORE_C) $(LDFLAGS)
-	
+# Utility
+
 clean:
-	-rm $(CORE_SO)
+	-rm -r $(BUILD)
+
+print:
+	@echo BUILD=$(BUILD)
+	@echo COMPAT_CFLAGS=$(COMPAT_CFLAGS)
+	@echo O_CFLAGS=$(O_CFLAGS)
+	@echo SO_LDFLAGS=$(SO_LDFLAGS)
+	@echo DEPFILES=$(DEPFILES)
+	@echo
+	@echo CC=$(CC)
+	@echo LD=$(LD)
+	@echo CFLAGS=$(CFLAGS)
+	@echo LDFLAGS=$(LDFLAGS)
+
+# Dependencies
+
+-include $(DEPFILES)
+
+$(BUILD)/evdev/core.so: $(BUILD)/evdev/core.o
